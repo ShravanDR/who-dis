@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "games": {
+      "$gameCode": {
+        ".read": true,
+        "clues": {
+          ".write": "root.child('games').child($gameCode).child('meta/phase').val() === 'clue-submission'"
+        },
+        "meta": {
+          ".write": false
+        },
+        "rounds": {
+          ".write": false
+        },
+        "scores": {
+          ".write": false
+        }
+      }
+    }
+  }
+}
