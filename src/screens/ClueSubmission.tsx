@@ -158,22 +158,30 @@ export default function ClueSubmission() {
         <div className="mt-6 text-center">
           <div className="text-sm text-[#888] mb-4">{filledSlots} / {totalSlots} clues uploaded</div>
 
-          {submitted ? (
+          {submitted && isFullySubmitted ? (
             <div className="inline-flex items-center gap-2 bg-[#E8F5E9] text-[#2E7D32] rounded-pill px-5 py-2.5 text-sm font-semibold">
-              ✓ Clues submitted — you're all set!
+              ✓ All clues submitted — you're all set!
             </div>
+          ) : submitted && !isFullySubmitted ? (
+            <>
+              <div className="inline-flex items-center gap-2 bg-[#FFF8E1] text-[#F57F17] rounded-pill px-5 py-2.5 text-sm font-semibold mb-3">
+                ✓ Submitted — but you still have {totalSlots - filledSlots} empty slot{totalSlots - filledSlots !== 1 ? 's' : ''}
+              </div>
+              <p className="text-xs text-[#888]">Upload more clues above anytime before the quiz starts. They save automatically.</p>
+            </>
           ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={filledSlots === 0}
-              className="w-full py-4 bg-accent text-white font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
-            >
-              {isFullySubmitted ? 'Submit clues →' : `Submit ${filledSlots} clue${filledSlots !== 1 ? 's' : ''} →`}
-            </button>
-          )}
-
-          {!submitted && !isFullySubmitted && filledSlots > 0 && (
-            <p className="text-xs text-[#888] mt-2">You can submit now, or keep uploading</p>
+            <>
+              <button
+                onClick={handleSubmit}
+                disabled={filledSlots === 0}
+                className="w-full py-4 bg-accent text-white font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
+              >
+                {isFullySubmitted ? 'Submit clues →' : `Submit ${filledSlots} clue${filledSlots !== 1 ? 's' : ''} →`}
+              </button>
+              {!isFullySubmitted && filledSlots > 0 && (
+                <p className="text-xs text-[#888] mt-2">You can submit now, or keep uploading</p>
+              )}
+            </>
           )}
         </div>
       </div>
