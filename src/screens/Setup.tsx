@@ -147,12 +147,23 @@ export default function Setup() {
     }
   }
 
-  function copyCode() {
-    if (gameCode) {
-      navigator.clipboard.writeText(gameCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+  async function copyCode() {
+    if (!gameCode) return
+    try {
+      await navigator.clipboard.writeText(gameCode)
+    } catch {
+      // Fallback for contexts where clipboard API is blocked
+      const ta = document.createElement('textarea')
+      ta.value = gameCode
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   // ─── Post-creation: show code ──────────────────────────────
