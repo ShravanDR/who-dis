@@ -16,6 +16,7 @@ export default function ClueSubmission() {
   // Local state: track uploaded URLs before persisting
   // Structure: slots[targetId][slotIndex] = url | null
   const [slots, setSlots] = useState<Record<string, (string | null)[]>>({})
+  const [submitted, setSubmitted] = useState(false)
 
   const me = game?.members[memberId ?? '']
   const assignedTo = me?.assignedTo ?? []
@@ -33,6 +34,17 @@ export default function ClueSubmission() {
       ]
     }
     setSlots(initial)
+  }, [game, memberId])
+
+  // Check if already marked submitted
+  useEffect(() => {
+    if (!game || !memberId) return
+    const clueData = game.clues
+    if (!clueData) return
+    const anySubmitted = assignedTo.some(
+      tid => clueData[tid]?.[memberId]?.submittedAt
+    )
+    if (anySubmitted) setSubmitted(true)
   }, [game, memberId])
 
   if (loading) return <LoadingSpinner />
@@ -79,6 +91,17 @@ export default function ClueSubmission() {
   const totalSlots = assignedTo.length * 3
   const filledSlots = Object.values(slots).flat().filter(Boolean).length
   const isFullySubmitted = filledSlots === totalSlots
+
+  function handleSubmit() {
+    if (filledSlots === 0) return
+    // Mark submittedAt for each target
+    const updates: Record<string, unknown> = {}
+    for (const targetId of assignedTo) {
+      updates[`games/${code}/clues/${targetId}/${memberId}/submittedAt`] = Date.now()
+    }
+    update(dbRef(db), updates)
+    setSubmitted(true)
+  }
 
   return (
     <div className="min-h-screen bg-cream px-6 py-10">
@@ -131,13 +154,26 @@ export default function ClueSubmission() {
           )
         })}
 
-        {/* Progress + done */}
-        <div className="mt-4 text-center">
-          <div className="text-sm text-[#888] mb-3">{filledSlots} / {totalSlots} clues uploaded</div>
-          {isFullySubmitted && (
+        {/* Progress + submit */}
+        <div className="mt-6 text-center">
+          <div className="text-sm text-[#888] mb-4">{filledSlots} / {totalSlots} clues uploaded</div>
+
+          {submitted ? (
             <div className="inline-flex items-center gap-2 bg-[#E8F5E9] text-[#2E7D32] rounded-pill px-5 py-2.5 text-sm font-semibold">
-              ✓ All clues submitted — you're done!
+              ✓ Clues submitted — you're all set!
             </div>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={filledSlots === 0}
+              className="w-full py-4 bg-accent text-white font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
+            >
+              {isFullySubmitted ? 'Submit clues →' : `Submit ${filledSlots} clue${filledSlots !== 1 ? 's' : ''} →`}
+            </button>
+          )}
+
+          {!submitted && !isFullySubmitted && filledSlots > 0 && (
+            <p className="text-xs text-[#888] mt-2">You can submit now, or keep uploading</p>
           )}
         </div>
       </div>
