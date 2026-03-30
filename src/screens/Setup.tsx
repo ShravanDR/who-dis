@@ -138,7 +138,9 @@ export default function Setup() {
       setHostSecret(secret)
       setGameCode(code)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create game')
+      console.error('Create game error:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg)
     } finally {
       setCreating(false)
       setUploadProgress(null)
@@ -249,7 +251,7 @@ export default function Setup() {
           <button
             type="submit"
             disabled={!name.trim()}
-            className="w-full h-10 bg-accent text-white text-sm font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
+            className="w-full h-10 border border-[#E8E0D4] text-[#1a1a1a] text-sm font-semibold rounded-pill disabled:opacity-40 hover:bg-[#F8F5F0] transition-colors"
           >
             + Add member
           </button>

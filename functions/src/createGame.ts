@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions'
 import { v4 as uuidv4 } from 'uuid'
 
 if (!admin.apps.length) admin.initializeApp()
@@ -21,23 +21,22 @@ function generateCode(length = 6): string {
   ).join('')
 }
 
-export const createGame = onCall<{ members: Record<string, Member> }>(
-  { region: 'us-central1' },
-  async (request) => {
-    const { members } = request.data
+export const createGame = functions.region('us-central1').https.onCall(
+  async (data: { members: Record<string, Member> }) => {
+    const { members } = data
 
     if (!members || Object.keys(members).length < 3) {
-      throw new HttpsError('invalid-argument', 'Need at least 3 members')
+      throw new functions.https.HttpsError('invalid-argument', 'Need at least 3 members')
     }
     if (Object.keys(members).length > 20) {
-      throw new HttpsError('invalid-argument', 'Maximum 20 members')
+      throw new functions.https.HttpsError('invalid-argument', 'Maximum 20 members')
     }
 
     // Validate each member has assignedTo and givesFrom (computed client-side)
     for (const [id, m] of Object.entries(members)) {
-      if (!m.name?.trim()) throw new HttpsError('invalid-argument', `Member ${id} missing name`)
+      if (!m.name?.trim()) throw new functions.https.HttpsError('invalid-argument', `Member ${id} missing name`)
       if (!Array.isArray(m.assignedTo) || m.assignedTo.length !== 2) {
-        throw new HttpsError('invalid-argument', `Member ${id} has invalid assignedTo`)
+        throw new functions.https.HttpsError('invalid-argument', `Member ${id} has invalid assignedTo`)
       }
     }
 
@@ -51,7 +50,7 @@ export const createGame = onCall<{ members: Record<string, Member> }>(
         break
       }
     }
-    if (!gameCode) throw new HttpsError('internal', 'Could not generate unique game code')
+    if (!gameCode) throw new functions.https.HttpsError('internal', 'Could not generate unique game code')
 
     const hostSecret = uuidv4()
 

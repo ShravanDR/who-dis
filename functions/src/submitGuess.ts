@@ -1,14 +1,11 @@
 import * as admin from 'firebase-admin'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions'
 
 if (!admin.apps.length) admin.initializeApp()
 
-export const submitGuess = onCall<{
-  gameCode: string; memberId: string; roundIndex: number; answer: string
-}>(
-  { region: 'us-central1' },
-  async (request) => {
-    const { gameCode, memberId, roundIndex, answer } = request.data
+export const submitGuess = functions.region('us-central1').https.onCall(
+  async (data: { gameCode: string; memberId: string; roundIndex: number; answer: string }) => {
+    const { gameCode, memberId, roundIndex, answer } = data
     const db = admin.database()
 
     const [metaSnap, roundSnap, membersSnap] = await Promise.all([
@@ -20,26 +17,26 @@ export const submitGuess = onCall<{
     const meta = metaSnap.val()
     const round = roundSnap.val()
     const members = membersSnap.val() as Record<string, { name: string; givesFrom: string[] }>
-    if (!round || !meta || !members) throw new HttpsError('not-found', 'Game data not found')
-    if (meta.phase !== 'quiz') throw new HttpsError('failed-precondition', 'Not in quiz phase')
-    if (!round.votingOpen) throw new HttpsError('failed-precondition', 'Voting is closed')
+    if (!round || !meta || !members) throw new functions.https.HttpsError('not-found', 'Game data not found')
+    if (meta.phase !== 'quiz') throw new functions.https.HttpsError('failed-precondition', 'Not in quiz phase')
+    if (!round.votingOpen) throw new functions.https.HttpsError('failed-precondition', 'Voting is closed')
 
     // Clue-givers and target cannot guess
     const targetId = round.targetMemberId
     const target = members[targetId]
     if (target?.givesFrom?.includes(memberId)) {
-      throw new HttpsError('permission-denied', 'Clue-givers cannot guess')
+      throw new functions.https.HttpsError('permission-denied', 'Clue-givers cannot guess')
     }
     if (targetId === memberId) {
-      throw new HttpsError('permission-denied', 'Target cannot guess')
+      throw new functions.https.HttpsError('permission-denied', 'Target cannot guess')
     }
 
     // Check existing guesses
     const existingSnap = await db.ref(`games/${gameCode}/rounds/${roundIndex}/guesses/${memberId}`).once('value')
     const existing = existingSnap.val() as Record<string, { correct: boolean }> | null ?? {}
     const attempts = Object.values(existing || {})
-    if (attempts.length >= 3) throw new HttpsError('failed-precondition', 'Max 3 guesses')
-    if (attempts.some(g => g.correct)) throw new HttpsError('failed-precondition', 'Already correct')
+    if (attempts.length >= 3) throw new functions.https.HttpsError('failed-precondition', 'Max 3 guesses')
+    if (attempts.some(g => g.correct)) throw new functions.https.HttpsError('failed-precondition', 'Already correct')
 
     const correct = answer.trim().toLowerCase() === members[targetId].name.trim().toLowerCase()
     const attemptNumber = attempts.length + 1

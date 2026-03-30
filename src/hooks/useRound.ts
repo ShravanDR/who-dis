@@ -14,7 +14,7 @@ export interface RoundState {
 
 export function useRound(game: GameState | null, memberId: string | null): RoundState {
   return useMemo(() => {
-    if (!game?.meta?.roundOrder || game.meta.currentRound === undefined || !memberId) {
+    if (!game?.meta?.roundOrder || game.meta.currentRound === undefined) {
       return {
         round: null, roundIndex: -1, targetMember: null, targetMemberId: null,
         clueUrls: [], myEligibility: 'loading' as const, myGuesses: [], isLastRound: false,
@@ -37,14 +37,15 @@ export function useRound(game: GameState | null, memberId: string | null): Round
     }
 
     // Eligibility
-    const isTarget = targetId === memberId
-    const isClueGiver = (givers as string[]).includes(memberId)
-    const myEligibility = isTarget ? 'target' as const
+    const isTarget = memberId ? targetId === memberId : false
+    const isClueGiver = memberId ? (givers as string[]).includes(memberId) : false
+    const myEligibility = !memberId ? 'loading' as const
+      : isTarget ? 'target' as const
       : isClueGiver ? 'clue-giver' as const
       : 'guesser' as const
 
     // My guesses this round
-    const myGuessMap = round?.guesses?.[memberId] ?? {}
+    const myGuessMap = memberId ? (round?.guesses?.[memberId] ?? {}) : {}
     const myGuesses = Object.values(myGuessMap).sort((a, b) => a.attemptNumber - b.attemptNumber)
 
     const isLastRound = roundIndex >= game.meta.memberCount - 1

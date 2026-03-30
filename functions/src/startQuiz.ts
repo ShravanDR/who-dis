@@ -1,15 +1,9 @@
 import * as admin from 'firebase-admin'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions'
 
 if (!admin.apps.length) admin.initializeApp()
 
 const db = admin.database()
-
-interface StartQuizRequest {
-  gameCode: string
-  hostSecret: string
-  revealIntervalSeconds: number
-}
 
 /** Fisher-Yates shuffle (in-place) */
 function shuffle<T>(arr: T[]): T[] {
@@ -20,27 +14,26 @@ function shuffle<T>(arr: T[]): T[] {
   return arr
 }
 
-export const startQuiz = onCall<StartQuizRequest>(
-  { region: 'us-central1' },
-  async (request) => {
-    const { gameCode, hostSecret, revealIntervalSeconds } = request.data
+export const startQuiz = functions.region('us-central1').https.onCall(
+  async (data: { gameCode: string; hostSecret: string; revealIntervalSeconds: number }) => {
+    const { gameCode, hostSecret, revealIntervalSeconds } = data
 
     if (!gameCode || !hostSecret) {
-      throw new HttpsError('invalid-argument', 'gameCode and hostSecret required')
+      throw new functions.https.HttpsError('invalid-argument', 'gameCode and hostSecret required')
     }
 
     const interval = Math.max(8, Math.min(20, revealIntervalSeconds ?? 12))
 
     // Verify host secret
     const metaSnap = await db.ref(`games/${gameCode}/meta`).once('value')
-    if (!metaSnap.exists()) throw new HttpsError('not-found', 'Game not found')
+    if (!metaSnap.exists()) throw new functions.https.HttpsError('not-found', 'Game not found')
 
     const meta = metaSnap.val()
     if (meta.hostSecret !== hostSecret) {
-      throw new HttpsError('permission-denied', 'Invalid host secret')
+      throw new functions.https.HttpsError('permission-denied', 'Invalid host secret')
     }
     if (meta.phase !== 'clue-submission') {
-      throw new HttpsError('failed-precondition', 'Game is not in clue-submission phase')
+      throw new functions.https.HttpsError('failed-precondition', 'Game is not in clue-submission phase')
     }
 
     // Build round order (shuffled member IDs)

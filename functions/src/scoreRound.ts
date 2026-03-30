@@ -1,15 +1,15 @@
 import * as admin from 'firebase-admin'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions'
 import { areImagesSimilar } from './similarityCheck'
 
 if (!admin.apps.length) admin.initializeApp()
 
-export const scoreRound = onCall<{
-  gameCode: string; hostSecret: string; roundIndex: number
-}>(
-  { region: 'us-central1', secrets: ['ANTHROPIC_API_KEY'] },
-  async (request) => {
-    const { gameCode, hostSecret, roundIndex } = request.data
+export const scoreRound = functions
+  .runWith({ secrets: ['ANTHROPIC_API_KEY'] })
+  .region('us-central1')
+  .https.onCall(
+  async (data: { gameCode: string; hostSecret: string; roundIndex: number }) => {
+    const { gameCode, hostSecret, roundIndex } = data
     const db = admin.database()
 
     const [metaSnap, roundSnap, membersSnap, cluesSnap, scoresSnap] = await Promise.all([
@@ -21,7 +21,7 @@ export const scoreRound = onCall<{
     ])
 
     const meta = metaSnap.val()
-    if (meta?.hostSecret !== hostSecret) throw new HttpsError('permission-denied', 'Invalid host secret')
+    if (meta?.hostSecret !== hostSecret) throw new functions.https.HttpsError('permission-denied', 'Invalid host secret')
 
     const round = roundSnap.val()
     const members = membersSnap.val() as Record<string, { givesFrom: string[]; name: string }>
@@ -104,7 +104,7 @@ export const scoreRound = onCall<{
               penalties[laterGiver] = (penalties[laterGiver] ?? 0) + 3
             }
           } catch {
-            // Skip on OpenAI failure
+            // Skip on API failure
           }
         }
       }

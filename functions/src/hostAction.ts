@@ -1,22 +1,19 @@
 import * as admin from 'firebase-admin'
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import * as functions from 'firebase-functions'
 
 if (!admin.apps.length) admin.initializeApp()
 
 type ActionType = 'pause' | 'resume' | 'skipClue' | 'reveal' | 'nextRound' | 'adjustTimer' | 'startRound'
 
-export const hostAction = onCall<{
-  gameCode: string; hostSecret: string; action: ActionType; payload?: { intervalSeconds?: number }
-}>(
-  { region: 'us-central1' },
-  async (request) => {
-    const { gameCode, hostSecret, action, payload } = request.data
+export const hostAction = functions.region('us-central1').https.onCall(
+  async (data: { gameCode: string; hostSecret: string; action: ActionType; payload?: { intervalSeconds?: number } }) => {
+    const { gameCode, hostSecret, action, payload } = data
     const db = admin.database()
 
     const metaSnap = await db.ref(`games/${gameCode}/meta`).once('value')
     const meta = metaSnap.val()
-    if (!meta) throw new HttpsError('not-found', 'Game not found')
-    if (meta.hostSecret !== hostSecret) throw new HttpsError('permission-denied', 'Invalid host secret')
+    if (!meta) throw new functions.https.HttpsError('not-found', 'Game not found')
+    if (meta.hostSecret !== hostSecret) throw new functions.https.HttpsError('permission-denied', 'Invalid host secret')
 
     const roundIndex = meta.currentRound
     const roundRef = db.ref(`games/${gameCode}/rounds/${roundIndex}`)
@@ -64,7 +61,7 @@ export const hostAction = onCall<{
         }
         break
       default:
-        throw new HttpsError('invalid-argument', `Unknown action: ${action}`)
+        throw new functions.https.HttpsError('invalid-argument', `Unknown action: ${action}`)
     }
 
     return { ok: true }
