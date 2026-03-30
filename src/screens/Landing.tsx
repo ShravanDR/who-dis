@@ -73,9 +73,6 @@ export default function Landing() {
         </button>
       </div>
 
-      <p className="mt-12 text-xs text-[#C4B9A8] text-center">
-        Monthly team game · 6–20 players
-      </p>
     </div>
   )
 }

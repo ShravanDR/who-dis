@@ -23,6 +23,7 @@ export interface GuessEntry {
   clueIndex: number
   correct: boolean
   timestamp: number
+  attemptNumber: number
 }
 
 export interface Round {
@@ -32,7 +33,7 @@ export interface Round {
   currentClueIndex: number    // -1 = not started; 0–N = revealing
   votingOpen: boolean
   revealed: boolean
-  guesses: Record<string, GuessEntry>
+  guesses: Record<string, Record<string, GuessEntry>>  // [memberId][attemptNumber]
 }
 
 // ─── Scores ───────────────────────────────────────────────────

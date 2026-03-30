@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { httpsCallable } from 'firebase/functions'
-import { functions } from '../firebase'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { functions, storage } from '../firebase'
 import { buildAssignments, buildGivesFrom } from '../lib/assignments'
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import type { Member } from '../types'
@@ -9,23 +10,45 @@ import type { Member } from '../types'
 interface MemberDraft {
   id: string
   name: string
-  photo: string
+  photo: string        // URL after upload
+  photoFile?: File     // local file before upload
+  photoPreview?: string // object URL for preview
 }
-
-const EMOJIS = ['🦁', '🐯', '🦊', '🐺', '🦋', '🐬', '🦄', '🐙', '🦜', '🦩', '🐸', '🦉']
 
 export default function Setup() {
   const navigate = useNavigate()
   const { setGameCode: saveCode, setHostSecret } = useLocalPlayer()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [members, setMembers] = useState<MemberDraft[]>([])
   const [name, setName] = useState('')
-  const [photo, setPhoto] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<Record<string, string[]> | null>(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [gameCode, setGameCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    setError(null)
+    e.target.value = ''
+  }
+
+  function clearPhoto() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+  }
 
   function addMember(e: React.FormEvent) {
     e.preventDefault()
@@ -36,20 +59,25 @@ export default function Setup() {
       return
     }
     const id = `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-    const emoji = photo.trim() || EMOJIS[members.length % EMOJIS.length]
-    setMembers(prev => [...prev, { id, name: trimName, photo: emoji }])
-    setName('')
-    setPhoto('')
-    setError(null)
-    // Auto-shuffle assignments when list changes
-    if (members.length + 1 >= 3) {
-      shuffleAssignments([...members, { id, name: trimName, photo: emoji }])
-    } else {
-      setAssignments(null)
+    const newMember: MemberDraft = {
+      id,
+      name: trimName,
+      photo: '',
+      photoFile: photoFile ?? undefined,
+      photoPreview: photoPreview ?? undefined,
     }
+    const updated = [...members, newMember]
+    setMembers(updated)
+    setName('')
+    clearPhoto()
+    setError(null)
+    if (updated.length >= 3) shuffleAssignments(updated)
+    else setAssignments(null)
   }
 
   function removeMember(id: string) {
+    const member = members.find(m => m.id === id)
+    if (member?.photoPreview) URL.revokeObjectURL(member.photoPreview)
     const next = members.filter(m => m.id !== id)
     setMembers(next)
     if (next.length >= 3) shuffleAssignments(next)
@@ -62,18 +90,37 @@ export default function Setup() {
     setAssignments(assignedTo)
   }
 
+  async function uploadMemberPhotos(gameCode: string): Promise<Record<string, string>> {
+    const photoUrls: Record<string, string> = {}
+    const toUpload = members.filter(m => m.photoFile)
+    for (let i = 0; i < toUpload.length; i++) {
+      const m = toUpload[i]
+      setUploadProgress(`Uploading photo ${i + 1}/${toUpload.length}…`)
+      const path = `members/${gameCode}/${m.id}.jpg`
+      const sRef = storageRef(storage, path)
+      await uploadBytes(sRef, m.photoFile!, { contentType: m.photoFile!.type })
+      photoUrls[m.id] = await getDownloadURL(sRef)
+    }
+    return photoUrls
+  }
+
   async function createGame() {
     if (!assignments || members.length < 3) return
     setCreating(true)
     setError(null)
 
     try {
+      // Generate a temp code for photo upload path
+      const tempCode = `pre_${Date.now()}`
+      const photoUrls = await uploadMemberPhotos(tempCode)
+      setUploadProgress(null)
+
       const givesFrom = buildGivesFrom(assignments)
       const membersForDb: Record<string, Member> = {}
       for (const m of members) {
         membersForDb[m.id] = {
           name: m.name,
-          photo: m.photo,
+          photo: photoUrls[m.id] || '',
           assignedTo: assignments[m.id] as [string, string],
           givesFrom: givesFrom[m.id] as [string, string],
         }
@@ -94,6 +141,7 @@ export default function Setup() {
       setError(err instanceof Error ? err.message : 'Failed to create game')
     } finally {
       setCreating(false)
+      setUploadProgress(null)
     }
   }
 
@@ -145,33 +193,68 @@ export default function Setup() {
           ← Back
         </button>
         <h1 className="font-lora text-3xl font-bold text-[#1a1a1a] mb-1">Set up your game</h1>
-        <p className="text-[#888] text-sm mb-8">Add 6–20 team members. Assignments are generated automatically.</p>
+        <p className="text-[#888] text-sm mb-8">Add your team members with their portrait photos.</p>
 
         {/* Add member form */}
         <form onSubmit={addMember} className="bg-white border border-[#E8E0D4] rounded-card p-5 mb-6">
-          <p className="text-sm font-semibold mb-3">Add a member</p>
-          <div className="flex gap-2 mb-2">
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Name"
-              className="flex-1 h-10 border border-[#E8E0D4] rounded-pill px-4 text-sm outline-none focus:border-accent transition-colors"
-            />
-            <input
-              value={photo}
-              onChange={e => setPhoto(e.target.value)}
-              placeholder="Photo URL or emoji"
-              className="w-40 h-10 border border-[#E8E0D4] rounded-pill px-4 text-sm outline-none focus:border-accent transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={!name.trim()}
-              className="h-10 px-5 bg-accent text-white text-sm font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
+          <p className="text-sm font-semibold mb-4">Add a member</p>
+
+          {/* Name input */}
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Name"
+            className="w-full h-11 border border-[#E8E0D4] rounded-pill px-4 text-sm outline-none focus:border-accent transition-colors mb-3"
+          />
+
+          {/* Photo upload area */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+
+          {photoPreview ? (
+            <div className="flex items-center gap-3 bg-[#F8F5F0] rounded-card p-3 mb-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                <img src={photoPreview} alt="" className="w-full h-full object-cover" />
+              </div>
+              <span className="text-sm text-[#1a1a1a] flex-1">Photo selected</span>
+              <button
+                type="button"
+                onClick={clearPhoto}
+                className="text-xs text-[#888] hover:text-danger transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 border border-dashed border-[#D4C9B8] rounded-card p-3 mb-4 cursor-pointer hover:border-accent transition-colors"
             >
-              Add
-            </button>
-          </div>
-          {error && <p className="text-xs text-danger mt-1">{error}</p>}
+              <div className="w-12 h-12 rounded-full bg-[#F0ECE4] flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">📷</span>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-[#1a1a1a] block">Upload portrait photo</span>
+                <span className="text-xs text-[#888]">Optional · stylized images work great</span>
+              </div>
+            </div>
+          )}
+
+          {/* Add button */}
+          <button
+            type="submit"
+            disabled={!name.trim()}
+            className="w-full h-10 bg-accent text-white text-sm font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
+          >
+            + Add member
+          </button>
+
+          {error && <p className="text-xs text-danger mt-2">{error}</p>}
         </form>
 
         {/* Member list */}
@@ -179,22 +262,26 @@ export default function Setup() {
           <div className="bg-white border border-[#E8E0D4] rounded-card divide-y divide-[#F0ECE4] mb-6">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="w-9 h-9 rounded-full bg-[#F0ECE4] flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
-                  {m.photo.startsWith('http') ? (
-                    <img src={m.photo} alt="" className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-full bg-[#F0ECE4] flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
+                  {m.photoPreview ? (
+                    <img src={m.photoPreview} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span>{m.photo}</span>
+                    <span className="text-sm text-[#C4B9A8]">{m.name[0]?.toUpperCase()}</span>
                   )}
                 </div>
-                <span className="flex-1 text-sm font-medium">{m.name}</span>
-                {assignments && (
-                  <span className="text-xs text-[#888]">
-                    Gives clues for:{' '}
-                    {assignments[m.id]
-                      ?.map(tid => members.find(x => x.id === tid)?.name)
-                      .filter(Boolean)
-                      .join(', ')}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium block truncate">{m.name}</span>
+                  {assignments && (
+                    <span className="text-xs text-[#888] block truncate">
+                      → {assignments[m.id]
+                        ?.map(tid => members.find(x => x.id === tid)?.name)
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
+                  )}
+                </div>
+                {m.photoPreview && (
+                  <span className="text-xs text-[#A5D6A7]">📷</span>
                 )}
                 <button
                   onClick={() => removeMember(m.id)}
@@ -230,7 +317,9 @@ export default function Setup() {
           disabled={!assignments || members.length < 3 || creating}
           className="w-full py-4 bg-accent text-white font-semibold rounded-pill disabled:opacity-40 hover:bg-[#d44d23] transition-colors"
         >
-          {creating ? 'Creating…' : 'Create game →'}
+          {creating
+            ? (uploadProgress || 'Creating…')
+            : 'Create game →'}
         </button>
       </div>
     </div>

@@ -1,2 +1,6 @@
 export { createGame } from './createGame'
 export { startQuiz } from './startQuiz'
+export { advanceClue } from './advanceClue'
+export { submitGuess } from './submitGuess'
+export { hostAction } from './hostAction'
+export { scoreRound } from './scoreRound'
