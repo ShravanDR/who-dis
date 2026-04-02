@@ -37,7 +37,7 @@ const PAGE_CONFIG: Record<Page, {
   },
 }
 
-export default function FinalLeaderboard({ game, memberId }: Props) {
+export default function FinalLeaderboard({ game, memberId: _memberId }: Props) {
   const navigate = useNavigate()
   const [pageIndex, setPageIndex] = useState(0)
   const page = PAGE_ORDER[pageIndex]
