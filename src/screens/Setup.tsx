@@ -20,6 +20,10 @@ export default function Setup() {
   const { setGameCode: saveCode, setHostSecret } = useLocalPlayer()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const savedCode = localStorage.getItem('whoDisGameCode')
+  const savedSecret = localStorage.getItem('whoDisHostSecret')
+  const [showReturning, setShowReturning] = useState(Boolean(savedCode && savedSecret))
+
   const [members, setMembers] = useState<MemberDraft[]>([])
   const [name, setName] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -198,6 +202,13 @@ export default function Setup() {
     )
   }
 
+  function handleNewGame() {
+    localStorage.removeItem('whoDisGameCode')
+    localStorage.removeItem('whoDisHostSecret')
+    localStorage.removeItem('whoDisMemberId')
+    setShowReturning(false)
+  }
+
   // ─── Setup form ───────────────────────────────────────────
   return (
     <div className="min-h-screen bg-cream px-6 py-10">
@@ -205,6 +216,36 @@ export default function Setup() {
         <button onClick={() => navigate('/')} className="text-sm text-[#888] hover:text-[#1a1a1a] mb-6 block transition-colors">
           ← Back
         </button>
+
+        {/* Returning host prompt */}
+        {showReturning && savedCode && (
+          <div className="bg-white border border-[#E8E0D4] rounded-card p-5 mb-6 space-y-3">
+            <h3 className="font-lora text-sm font-semibold text-[#888]">
+              Welcome back
+            </h3>
+            <p className="text-sm text-[#1a1a1a]">
+              You have an active game:{' '}
+              <span className="font-lora text-accent font-bold tracking-widest">
+                {savedCode}
+              </span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate(`/monitor/${savedCode}`)}
+                className="flex-1 py-3 bg-accent text-white text-sm font-semibold rounded-pill hover:bg-[#d44d23] transition-colors"
+              >
+                Go to monitor →
+              </button>
+              <button
+                onClick={handleNewGame}
+                className="flex-1 py-3 border border-[#E8E0D4] text-[#1a1a1a] text-sm font-semibold rounded-pill hover:bg-[#F8F5F0] transition-colors"
+              >
+                New game
+              </button>
+            </div>
+          </div>
+        )}
+
         <h1 className="font-lora text-3xl font-bold text-[#1a1a1a] mb-1">Set up your game</h1>
         <p className="text-[#888] text-sm mb-8">Add your team members with their portrait photos.</p>
 

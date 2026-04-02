@@ -1,4 +1,6 @@
 import { useParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { useGame } from '../hooks/useGame'
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import { useRound } from '../hooks/useRound'
@@ -7,6 +9,7 @@ import GuessInput from '../components/GuessInput'
 import PlayerChips from '../components/PlayerChips'
 import LeaderboardSidebar from '../components/LeaderboardSidebar'
 import HostOverlay from '../components/HostOverlay'
+import OrbitalLoader from '../components/OrbitalLoader'
 import RoundReveal from './RoundReveal'
 import FinalLeaderboard from './FinalLeaderboard'
 
@@ -16,10 +19,60 @@ export default function Quiz() {
   const { memberId, hostSecret } = useLocalPlayer()
   const roundState = useRound(game, memberId)
 
+  // Local reveal state — we control when this flips so we can wrap it in startViewTransition
+  const round = roundState.round
+  const isRevealed = round?.revealed ?? false
+
+  // Track if we've seen this round in its non-revealed state (so we can animate the transition)
+  const seenUnrevealed = useRef(false)
+  const [showRevealed, setShowRevealed] = useState(isRevealed)
+  const lastRoundIndex = useRef(roundState.roundIndex)
+
+  useEffect(() => {
+    // Round changed — reset
+    if (roundState.roundIndex !== lastRoundIndex.current) {
+      lastRoundIndex.current = roundState.roundIndex
+      seenUnrevealed.current = !isRevealed
+      setShowRevealed(isRevealed)
+      return
+    }
+
+    // Track that we've seen this round un-revealed
+    if (!isRevealed) {
+      seenUnrevealed.current = true
+      setShowRevealed(false)
+      return
+    }
+
+    // Round just became revealed
+    if (isRevealed && !showRevealed) {
+      // Only animate if we saw the filmstrip (not on initial page load where round was already revealed)
+      if (!seenUnrevealed.current) {
+        setShowRevealed(true)
+        return
+      }
+
+      const startVT = (document as unknown as Record<string, unknown>).startViewTransition as
+        ((cb: () => void) => { finished: Promise<void> }) | undefined
+
+      if (startVT) {
+        try {
+          startVT(() => {
+            flushSync(() => setShowRevealed(true))
+          })
+        } catch {
+          setShowRevealed(true)
+        }
+      } else {
+        setShowRevealed(true)
+      }
+    }
+  }, [isRevealed, roundState.roundIndex, showRevealed])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <OrbitalLoader size={80} />
       </div>
     )
   }
@@ -37,21 +90,22 @@ export default function Quiz() {
     return <FinalLeaderboard game={game} memberId={memberId} />
   }
 
-  const { round, roundIndex, targetMember, targetMemberId, clueUrls, myEligibility, myGuesses, isLastRound } = roundState
+  const { roundIndex, targetMember, targetMemberId, clueUrls, myEligibility, myGuesses, isLastRound } = roundState
 
+  // Waiting for quiz to start — no rounds yet
   if (!round || !targetMember || !targetMemberId) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
-          <p className="text-5xl mb-4">&#9203;</p>
+          <OrbitalLoader size={64} className="mx-auto mb-6" />
           <h2 className="font-lora text-2xl font-bold mb-2">Waiting for quiz to start...</h2>
         </div>
       </div>
     )
   }
 
-  // Round revealed → show breakdown
-  if (round.revealed) {
+  // Round revealed → show breakdown with view transition
+  if (showRevealed) {
     return (
       <>
         <RoundReveal
@@ -87,7 +141,7 @@ export default function Quiz() {
               <span className="text-xs text-[#888] uppercase tracking-wider font-semibold">Round</span>
               <span className="font-lora text-base font-bold text-accent">{roundIndex + 1}/{game.meta.memberCount}</span>
             </div>
-            <h2 className="font-lora text-xl font-bold text-[#1a1a1a]">Who is this?</h2>
+            <h2 className="font-lora text-xl font-bold text-[#1a1a1a]">Who Dis?</h2>
           </div>
 
           {/* Filmstrip */}
@@ -121,24 +175,28 @@ export default function Quiz() {
                 <p className="text-sm text-accent font-medium">You gave clues for this round</p>
                 <p className="text-xs text-[#888] mt-1">Sit back and watch them guess!</p>
               </div>
-            ) : myEligibility === 'target' ? (
-              <div className="bg-[#F3E5F5] border border-[#CE93D8] rounded-card p-4 text-center">
-                <p className="text-sm text-[#7B1FA2] font-medium">This round is about you!</p>
-                <p className="text-xs text-[#888] mt-1">Let's see who knows you best</p>
-              </div>
             ) : null}
           </div>
 
           {/* Player chips */}
           {round.currentClueIndex >= 0 && (
-            <div>
+            <div className="mb-6">
               <p className="text-xs text-[#888] font-semibold uppercase tracking-wider mb-2">Players</p>
               <PlayerChips round={round} members={game.members} targetMemberId={targetMemberId} />
             </div>
           )}
+
+          {/* Mobile leaderboard — visible below lg */}
+          <div className="lg:hidden">
+            <LeaderboardSidebar
+              scores={game.scores ?? {}}
+              members={game.members}
+              currentMemberId={memberId}
+            />
+          </div>
         </div>
 
-        {/* Sidebar: Leaderboard */}
+        {/* Sidebar: Leaderboard — desktop */}
         <div className="w-64 flex-shrink-0 hidden lg:block">
           <LeaderboardSidebar
             scores={game.scores ?? {}}

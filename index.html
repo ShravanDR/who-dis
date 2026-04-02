@@ -29,10 +29,59 @@
               pill: '100px',
               card: '14px',
             },
+            keyframes: {
+              fadeSlideIn: {
+                '0%': { opacity: '0', transform: 'translateY(12px) scale(0.95)' },
+                '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+              },
+              revealPop: {
+                '0%': { opacity: '0', transform: 'scale(0.8)' },
+                '60%': { opacity: '1', transform: 'scale(1.03)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
+            },
           }
         }
       }
     </script>
+    <style>
+      /* View Transition: smooth positional animation for clue images */
+      ::view-transition-old(clue-0),
+      ::view-transition-old(clue-1),
+      ::view-transition-old(clue-2),
+      ::view-transition-old(clue-3),
+      ::view-transition-old(clue-4),
+      ::view-transition-old(clue-5),
+      ::view-transition-new(clue-0),
+      ::view-transition-new(clue-1),
+      ::view-transition-new(clue-2),
+      ::view-transition-new(clue-3),
+      ::view-transition-new(clue-4),
+      ::view-transition-new(clue-5) {
+        animation-duration: 0.7s;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Portrait reveal: scale up from nothing */
+      ::view-transition-old(reveal-portrait) {
+        animation: none;
+        opacity: 0;
+      }
+      ::view-transition-new(reveal-portrait) {
+        animation: vt-portrait-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+      }
+      @keyframes vt-portrait-in {
+        from { opacity: 0; transform: scale(0.6); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+
+      /* Page crossfade: soften the overall page transition */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0.5s;
+        animation-timing-function: ease;
+      }
+    </style>
   </head>
   <body class="bg-cream font-jakarta text-[#1a1a1a] min-h-screen">
     <div id="root"></div>

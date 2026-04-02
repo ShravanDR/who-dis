@@ -49,6 +49,7 @@ export default function ClueFilmstrip({ clueUrls, availableCount, currentIndex, 
                   ? 'opacity-60'
                   : 'bg-[#F0ECE4]'
               }`}
+              style={{ viewTransitionName: `clue-${i}` } as React.CSSProperties}
             >
               {isRevealed && url ? (
                 <img src={url} alt={`Clue ${i + 1}`} className="w-full h-full object-cover" />

@@ -37,7 +37,7 @@ export function useRound(game: GameState | null, memberId: string | null): Round
     }
 
     // Eligibility
-    const isTarget = memberId ? targetId === memberId : false
+    const isTarget = false  // Target can also guess
     const isClueGiver = memberId ? (givers as string[]).includes(memberId) : false
     const myEligibility = !memberId ? 'loading' as const
       : isTarget ? 'target' as const

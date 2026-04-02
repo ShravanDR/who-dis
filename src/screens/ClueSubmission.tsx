@@ -5,6 +5,7 @@ import { db } from '../firebase'
 import { useGame } from '../hooks/useGame'
 import { useLocalPlayer } from '../hooks/useLocalPlayer'
 import ImageUploadSlot from '../components/ImageUploadSlot'
+import OrbitalLoader from '../components/OrbitalLoader'
 import MemberAvatar from '../components/MemberAvatar'
 
 export default function ClueSubmission() {
@@ -192,7 +193,7 @@ export default function ClueSubmission() {
 function LoadingSpinner() {
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <OrbitalLoader size={80} />
     </div>
   )
 }

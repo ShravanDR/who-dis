@@ -88,7 +88,7 @@ export default function GuessInput({
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setLastResult(null) }}
-          placeholder={`Guess who… (${attemptsLeft} left)`}
+          placeholder={`Guess who… (${attemptsLeft} guess${attemptsLeft !== 1 ? 'es' : ''} left)`}
           disabled={disabled}
           className="w-full h-12 border border-[#E8E0D4] rounded-pill px-5 text-sm outline-none focus:border-accent transition-colors disabled:opacity-50"
           onKeyDown={e => {

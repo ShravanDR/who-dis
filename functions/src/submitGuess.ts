@@ -21,14 +21,11 @@ export const submitGuess = functions.region('us-central1').https.onCall(
     if (meta.phase !== 'quiz') throw new functions.https.HttpsError('failed-precondition', 'Not in quiz phase')
     if (!round.votingOpen) throw new functions.https.HttpsError('failed-precondition', 'Voting is closed')
 
-    // Clue-givers and target cannot guess
+    // Clue-givers cannot guess
     const targetId = round.targetMemberId
     const target = members[targetId]
     if (target?.givesFrom?.includes(memberId)) {
       throw new functions.https.HttpsError('permission-denied', 'Clue-givers cannot guess')
-    }
-    if (targetId === memberId) {
-      throw new functions.https.HttpsError('permission-denied', 'Target cannot guess')
     }
 
     // Check existing guesses
