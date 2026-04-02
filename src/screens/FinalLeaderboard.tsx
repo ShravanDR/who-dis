@@ -121,7 +121,7 @@ export default function FinalLeaderboard({ game, memberId: _memberId }: Props) {
                     {hasPhoto
                       ? <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
                       : <div className="w-full h-full bg-[#F0ECE4] flex flex-col items-center justify-center gap-2">
-                          <span className="text-3xl font-bold text-[#C4B9A8]">{p.name[0]?.toUpperCase()}</span>
+                          <span className="text-3xl font-bold text-[#9A8E7E]">{p.name[0]?.toUpperCase()}</span>
                           <span className="text-xs text-[#888]">{p.name}</span>
                         </div>
                     }
@@ -140,7 +140,7 @@ export default function FinalLeaderboard({ game, memberId: _memberId }: Props) {
                 key={p.id}
                 className={`flex items-center gap-3 px-2 py-3 ${i > 0 ? 'border-t border-[#E8E0D4]' : ''}`}
               >
-                <span className="w-6 text-sm font-bold text-[#C4B9A8] text-center">{i + 4}</span>
+                <span className="w-6 text-sm font-bold text-[#9A8E7E] text-center">{i + 4}</span>
                 <div className="w-9 h-9 rounded-full bg-[#F0ECE4] flex items-center justify-center text-sm overflow-hidden flex-shrink-0">
                   {p.photo && (p.photo.startsWith('http') || p.photo.startsWith('/'))
                     ? <img src={p.photo} alt="" className="w-full h-full object-cover" />

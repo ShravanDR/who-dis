@@ -55,7 +55,7 @@ export default function ClueFilmstrip({ clueUrls, availableCount, currentIndex, 
                 <img src={url} alt={`Clue ${i + 1}`} className="w-full h-full object-cover" />
               ) : isLocked ? (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-xl text-[#C4B9A8]">?</span>
+                  <span className="text-xl text-[#9A8E7E]">?</span>
                 </div>
               ) : null}
 

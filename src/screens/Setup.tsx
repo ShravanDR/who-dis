@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { httpsCallable } from 'firebase/functions'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
@@ -19,6 +19,13 @@ export default function Setup() {
   const navigate = useNavigate()
   const { setGameCode: saveCode, setHostSecret } = useLocalPlayer()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+    }
+  }, [])
 
   const savedCode = localStorage.getItem('whoDisGameCode')
   const savedSecret = localStorage.getItem('whoDisHostSecret')
@@ -142,7 +149,6 @@ export default function Setup() {
       setHostSecret(secret)
       setGameCode(code)
     } catch (err: unknown) {
-      console.error('Create game error:', err)
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)
     } finally {
@@ -167,7 +173,8 @@ export default function Setup() {
       document.body.removeChild(ta)
     }
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   // ─── Post-creation: show code ──────────────────────────────
@@ -286,7 +293,11 @@ export default function Setup() {
             </div>
           ) : (
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+              aria-label="Upload portrait photo"
               className="flex items-center gap-3 border border-dashed border-[#D4C9B8] rounded-card p-3 mb-4 cursor-pointer hover:border-accent transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-[#F0ECE4] flex items-center justify-center flex-shrink-0">
@@ -320,7 +331,7 @@ export default function Setup() {
                   {m.photoPreview ? (
                     <img src={m.photoPreview} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-sm text-[#C4B9A8]">{m.name[0]?.toUpperCase()}</span>
+                    <span className="text-sm text-[#9A8E7E]">{m.name[0]?.toUpperCase()}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -339,7 +350,8 @@ export default function Setup() {
                 )}
                 <button
                   onClick={() => removeMember(m.id)}
-                  className="text-[#C4B9A8] hover:text-danger text-lg leading-none transition-colors"
+                  aria-label={`Remove ${m.name}`}
+                  className="text-[#9A8E7E] hover:text-danger text-lg leading-none transition-colors"
                 >
                   ×
                 </button>

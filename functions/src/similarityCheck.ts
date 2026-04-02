@@ -6,7 +6,15 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
  * Fetches an image URL and returns it as a base64 data string.
  */
 async function imageToBase64(url: string): Promise<{ data: string; mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' }> {
+  const parsed = new URL(url)
+  if (parsed.hostname !== 'firebasestorage.googleapis.com') {
+    throw new Error('Only Firebase Storage URLs are allowed')
+  }
+
   const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Fetch failed with status ${response.status}`)
+  }
   const buffer = await response.arrayBuffer()
   const base64 = Buffer.from(buffer).toString('base64')
   const contentType = response.headers.get('content-type') ?? 'image/jpeg'

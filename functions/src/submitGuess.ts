@@ -6,6 +6,9 @@ if (!admin.apps.length) admin.initializeApp()
 export const submitGuess = functions.region('us-central1').https.onCall(
   async (data: { gameCode: string; memberId: string; roundIndex: number; answer: string }) => {
     const { gameCode, memberId, roundIndex, answer } = data
+    if (answer.trim().length > 100) {
+      throw new functions.https.HttpsError('invalid-argument', 'Answer must be 100 characters or fewer')
+    }
     const db = admin.database()
 
     const [metaSnap, roundSnap, membersSnap] = await Promise.all([

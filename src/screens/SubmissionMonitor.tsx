@@ -133,6 +133,7 @@ export default function SubmissionMonitor() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setRevealInterval(v => Math.max(8, v - 1))}
+                  aria-label="Decrease seconds between clues"
                   className="w-8 h-8 rounded-full border border-[#E8E0D4] flex items-center justify-center text-lg hover:bg-[#F8F5F0] transition-colors"
                 >
                   −
@@ -140,6 +141,7 @@ export default function SubmissionMonitor() {
                 <span className="w-8 text-center font-bold text-lg">{revealInterval}</span>
                 <button
                   onClick={() => setRevealInterval(v => Math.min(20, v + 1))}
+                  aria-label="Increase seconds between clues"
                   className="w-8 h-8 rounded-full border border-[#E8E0D4] flex items-center justify-center text-lg hover:bg-[#F8F5F0] transition-colors"
                 >
                   +

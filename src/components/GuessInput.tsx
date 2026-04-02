@@ -106,6 +106,7 @@ export default function GuessInput({
                 key={o.id}
                 type="button"
                 onClick={() => submitGuess(o.name)}
+                aria-label={`Guess ${o.name}`}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#F8F5F0] transition-colors first:rounded-t-card last:rounded-b-card"
               >
                 {o.name}

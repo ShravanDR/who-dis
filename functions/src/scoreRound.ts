@@ -88,8 +88,12 @@ export const scoreRound = functions
       const cluesA = clues[targetId]?.[giverA] ?? {}
       const cluesB = clues[targetId]?.[giverB] ?? {}
 
-      const timeA = (await db.ref(`games/${gameCode}/clues/${targetId}/${giverA}/submittedAt`).once('value')).val() as number ?? 0
-      const timeB = (await db.ref(`games/${gameCode}/clues/${targetId}/${giverB}/submittedAt`).once('value')).val() as number ?? 0
+      const [timeASnap, timeBSnap] = await Promise.all([
+        db.ref(`games/${gameCode}/clues/${targetId}/${giverA}/submittedAt`).once('value'),
+        db.ref(`games/${gameCode}/clues/${targetId}/${giverB}/submittedAt`).once('value'),
+      ])
+      const timeA = timeASnap.val() as number ?? 0
+      const timeB = timeBSnap.val() as number ?? 0
       const laterGiver = timeA > timeB ? giverA
         : timeB > timeA ? giverB
         : giverA > giverB ? giverA : giverB

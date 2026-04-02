@@ -43,8 +43,8 @@ export default function HostOverlay({ gameCode, hostSecret, round, roundIndex, i
       } else {
         await hostAction({ gameCode, hostSecret, action, payload })
       }
-    } catch (err) {
-      console.error(err)
+    } catch {
+      // silently handled
     } finally {
       setBusy('')
     }
@@ -76,6 +76,7 @@ export default function HostOverlay({ gameCode, hostSecret, round, roundIndex, i
           <button
             onClick={() => doAction('skipClue')}
             disabled={!!busy || allRevealed}
+            aria-label="Skip to next clue"
             className="px-3 py-2 border border-[#E8E0D4] text-xs font-semibold rounded-pill hover:bg-[#F8F5F0] disabled:opacity-50 transition-colors"
           >
             Skip
@@ -83,6 +84,7 @@ export default function HostOverlay({ gameCode, hostSecret, round, roundIndex, i
           <button
             onClick={() => doAction('reveal')}
             disabled={!!busy}
+            aria-label="Reveal answer"
             className="px-3 py-2 bg-[#1a1a1a] text-white text-xs font-semibold rounded-pill hover:bg-black disabled:opacity-50 transition-colors"
           >
             Reveal

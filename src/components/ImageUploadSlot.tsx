@@ -40,9 +40,8 @@ export default function ImageUploadSlot({
       await uploadBytes(sRef, cropped, { contentType: 'image/jpeg' })
       const url = await getDownloadURL(sRef)
       onUploaded(url)
-    } catch (err) {
+    } catch {
       setError('Upload failed — try again')
-      console.error(err)
     } finally {
       setUploading(false)
     }
@@ -63,11 +62,15 @@ export default function ImageUploadSlot({
 
   return (
     <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={`Upload clue image ${slotIndex + 1}`}
       className={`relative aspect-[3/4] rounded-card overflow-hidden border-2 transition-all cursor-pointer
         ${currentUrl ? 'border-[#E8E0D4]' : 'border-dashed border-[#D4C9B8]'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-accent'}
         bg-[#F8F5F0]`}
       onClick={() => !disabled && !uploading && inputRef.current?.click()}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !disabled && !uploading) { e.preventDefault(); inputRef.current?.click() } }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={disabled ? undefined : handleDrop}
     >
@@ -93,8 +96,8 @@ export default function ImageUploadSlot({
 
       {!currentUrl && !uploading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-          <div className="text-2xl text-[#C4B9A8]">+</div>
-          <span className="text-xs text-[#C4B9A8] font-medium">Clue {slotIndex + 1}</span>
+          <div className="text-2xl text-[#9A8E7E]">+</div>
+          <span className="text-xs text-[#9A8E7E] font-medium">Clue {slotIndex + 1}</span>
         </div>
       )}
 

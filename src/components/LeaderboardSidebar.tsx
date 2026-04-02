@@ -31,7 +31,7 @@ export default function LeaderboardSidebar({ scores, members, currentMemberId }:
             key={p.id}
             className={`flex items-center gap-2.5 px-4 py-2.5 ${p.id === currentMemberId ? 'bg-[#FFF8F5]' : ''}`}
           >
-            <span className={`w-5 text-xs font-bold text-center ${rank < 3 ? 'text-accent' : 'text-[#C4B9A8]'}`}>
+            <span className={`w-5 text-xs font-bold text-center ${rank < 3 ? 'text-accent' : 'text-[#9A8E7E]'}`}>
               {rank + 1}
             </span>
             <div className="w-7 h-7 rounded-full bg-[#F0ECE4] flex items-center justify-center text-xs overflow-hidden flex-shrink-0">

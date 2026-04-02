@@ -35,6 +35,7 @@ export const createGame = functions.region('us-central1').https.onCall(
     // Validate each member has assignedTo and givesFrom (computed client-side)
     for (const [id, m] of Object.entries(members)) {
       if (!m.name?.trim()) throw new functions.https.HttpsError('invalid-argument', `Member ${id} missing name`)
+      if (m.name.trim().length > 100) throw new functions.https.HttpsError('invalid-argument', `Member ${id} name exceeds 100 characters`)
       if (!Array.isArray(m.assignedTo) || m.assignedTo.length !== 2) {
         throw new functions.https.HttpsError('invalid-argument', `Member ${id} has invalid assignedTo`)
       }

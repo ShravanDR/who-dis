@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import LeaderboardSidebar from '../components/LeaderboardSidebar'
 import type { GameState, Round, Member } from '../types'
 
@@ -23,21 +24,25 @@ export default function RoundReveal({ game, round, roundIndex, targetMember, tar
   }
 
   // Who guessed correctly?
-  const correctGuessers: { name: string; clueIndex: number; attempts: number }[] = []
-  const wrongGuessers: { name: string; attempts: number }[] = []
+  const { correctGuessers, wrongGuessers } = useMemo(() => {
+    const correct: { name: string; clueIndex: number; attempts: number }[] = []
+    const wrong: { name: string; attempts: number }[] = []
 
-  for (const [guesserId, attempts] of Object.entries(guesses)) {
-    const sorted = Object.values(attempts).sort((a, b) => a.attemptNumber - b.attemptNumber)
-    const correct = sorted.find(a => a.correct)
-    const playerName = game.members[guesserId]?.name ?? '???'
-    if (correct) {
-      correctGuessers.push({ name: playerName, clueIndex: correct.clueIndex, attempts: sorted.length })
-    } else {
-      wrongGuessers.push({ name: playerName, attempts: sorted.length })
+    for (const [guesserId, attempts] of Object.entries(guesses)) {
+      const sorted = Object.values(attempts).sort((a, b) => a.attemptNumber - b.attemptNumber)
+      const correctAttempt = sorted.find(a => a.correct)
+      const playerName = game.members[guesserId]?.name ?? '???'
+      if (correctAttempt) {
+        correct.push({ name: playerName, clueIndex: correctAttempt.clueIndex, attempts: sorted.length })
+      } else {
+        wrong.push({ name: playerName, attempts: sorted.length })
+      }
     }
-  }
 
-  correctGuessers.sort((a, b) => a.clueIndex - b.clueIndex || a.attempts - b.attempts)
+    correct.sort((a, b) => a.clueIndex - b.clueIndex || a.attempts - b.attempts)
+
+    return { correctGuessers: correct, wrongGuessers: wrong }
+  }, [guesses, game.members])
 
   return (
     <div className="min-h-screen bg-cream px-6 py-10">
@@ -96,7 +101,7 @@ export default function RoundReveal({ game, round, roundIndex, targetMember, tar
               />
             ) : (
               <div className="w-full h-full bg-[#F0ECE4] flex items-center justify-center">
-                <span className="text-8xl text-[#C4B9A8]">{targetMember.name[0]?.toUpperCase()}</span>
+                <span className="text-8xl text-[#9A8E7E]">{targetMember.name[0]?.toUpperCase()}</span>
               </div>
             )}
           </div>
