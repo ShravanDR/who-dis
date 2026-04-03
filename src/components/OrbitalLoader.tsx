@@ -13,7 +13,7 @@ export default function OrbitalLoader({ size = 80, className = '' }: Props) {
     const svg = svgRef.current
     if (!svg) return
 
-    const CYCLE = 4500
+    const CYCLE = 5000 // ms per full orbit cycle
     const els = {
       dome: svg.querySelector(`[data-orb="dome"]`) as SVGGElement,
       d: svg.querySelector(`[data-orb="d"]`) as SVGGElement,
@@ -21,91 +21,56 @@ export default function OrbitalLoader({ size = 80, className = '' }: Props) {
       tri: svg.querySelector(`[data-orb="tri"]`) as SVGGElement,
     }
 
-    const pivots: Record<string, [number, number]> = {
+    // Logo-assembled positions (center of each shape)
+    const home: Record<string, [number, number]> = {
       dome: [24, 32], d: [66, 24], dot: [16, 66], tri: [66, 74],
     }
 
-    const scatter: Record<string, { a: number[]; b: number[] }> = {
-      dome: { a: [-38, -28, -18], b: [32, -34, 22] },
-      d:    { a: [36, -32, 16],   b: [-34, 28, -18] },
-      dot:  { a: [-30, 32, 12],   b: [26, 34, -20] },
-      tri:  { a: [32, 30, -20],   b: [-36, -28, 16] },
+    // Orbit parameters: each piece orbits at different radius, speed, phase
+    const orbits: Record<string, { rx: number; ry: number; speed: number; phase: number; rotSpeed: number }> = {
+      dome: { rx: 34, ry: 28, speed: 1.0, phase: 0, rotSpeed: 0.8 },
+      d:    { rx: 30, ry: 36, speed: 1.0, phase: Math.PI * 0.5, rotSpeed: -0.6 },
+      dot:  { rx: 32, ry: 30, speed: 1.0, phase: Math.PI, rotSpeed: 0.7 },
+      tri:  { rx: 28, ry: 34, speed: 1.0, phase: Math.PI * 1.5, rotSpeed: -0.9 },
     }
-
-    const wobble: Record<string, { fx: number; fy: number; ax: number; ay: number }> = {
-      dome: { fx: 1.7, fy: 2.3, ax: 3, ay: 2.5 },
-      d:    { fx: 2.1, fy: 1.5, ax: 2.5, ay: 3 },
-      dot:  { fx: 1.9, fy: 2.7, ax: 2, ay: 2 },
-      tri:  { fx: 2.5, fy: 1.8, ax: 3, ay: 2.5 },
-    }
-
-    function smootherstep(t: number) {
-      return t * t * t * (t * (t * 6 - 15) + 10)
-    }
-    function lerp(a: number, b: number, t: number) { return a + (b - a) * t }
 
     let t0: number | null = null
     let rafId: number
 
     function tick(ts: number) {
       if (!t0) t0 = ts
-      const t = ((ts - t0) % CYCLE) / CYCLE
-      const timeSec = (ts - t0) / 1000
+      const elapsed = (ts - t0) / 1000
+      const cycleT = ((ts - t0) % CYCLE) / CYCLE
+
+      // Smooth convergence: 0 = scattered/orbiting, 1 = assembled
+      // Uses a smooth bell curve that peaks at cycleT ≈ 0.5
+      const convergence = Math.pow(Math.sin(cycleT * Math.PI), 2.5)
 
       for (const [name, el] of Object.entries(els)) {
         if (!el) continue
-        const sa = scatter[name].a
-        const sb = scatter[name].b
-        const w = wobble[name]
-        const [px, py] = pivots[name]
+        const [hx, hy] = home[name]
+        const orb = orbits[name]
 
-        let tx: number, ty: number, rot: number, sc: number, op: number
+        // Orbital position (scattered state)
+        const angle = elapsed * orb.speed + orb.phase
+        const ox = Math.sin(angle) * orb.rx
+        const oy = Math.cos(angle) * orb.ry
 
-        if (t < 0.38) {
-          const p = smootherstep(t / 0.38)
-          const drift = p * 0.3
-          tx = lerp(sa[0], 0, drift)
-          ty = lerp(sa[1], 0, drift)
-          rot = lerp(sa[2], 0, drift)
-          sc = lerp(0.72, 0.85, p)
-          op = lerp(0.55, 0.80, p)
-          tx += Math.sin(timeSec * w.fx) * w.ax * (1 - drift)
-          ty += Math.cos(timeSec * w.fy) * w.ay * (1 - drift)
-        } else if (t < 0.45) {
-          const p = smootherstep((t - 0.38) / 0.07)
-          const startTx = sa[0] * 0.7
-          const startTy = sa[1] * 0.7
-          const startRot = sa[2] * 0.7
-          tx = lerp(startTx, 0, p)
-          ty = lerp(startTy, 0, p)
-          rot = lerp(startRot, 0, p)
-          sc = lerp(0.85, 1.0, p)
-          op = lerp(0.80, 1.0, p)
-        } else if (t < 0.58) {
-          tx = 0; ty = 0; rot = 0
-          const pulseT = (t - 0.45) / 0.13
-          sc = 1.0 + 0.04 * Math.sin(pulseT * Math.PI)
-          op = 1.0
-        } else if (t < 0.65) {
-          const p = smootherstep((t - 0.58) / 0.07)
-          tx = lerp(0, sb[0] * 0.7, p)
-          ty = lerp(0, sb[1] * 0.7, p)
-          rot = lerp(0, sb[2] * 0.7, p)
-          sc = lerp(1.0, 0.85, p)
-          op = lerp(1.0, 0.80, p)
-        } else {
-          const p = smootherstep((t - 0.65) / 0.35)
-          tx = lerp(sb[0], sa[0], p)
-          ty = lerp(sb[1], sa[1], p)
-          rot = lerp(sb[2], sa[2], p)
-          sc = lerp(0.72, 0.72, p)
-          op = lerp(0.65, 0.55, p)
-          tx += Math.sin(timeSec * w.fx) * w.ax
-          ty += Math.cos(timeSec * w.fy) * w.ay
-        }
+        // Blend between orbit and home
+        const tx = ox * (1 - convergence)
+        const ty = oy * (1 - convergence)
+
+        // Rotation: spins when scattered, settles when assembled
+        const rot = elapsed * orb.rotSpeed * 40 * (1 - convergence)
+
+        // Scale: smaller when scattered, full when assembled
+        const sc = 0.7 + 0.3 * convergence
+
+        // Opacity: dimmer when scattered, full when assembled
+        const op = 0.5 + 0.5 * convergence
 
         el.setAttribute('transform',
-          `translate(${tx} ${ty}) translate(${px} ${py}) rotate(${rot}) scale(${sc}) translate(${-px} ${-py})`
+          `translate(${tx} ${ty}) translate(${hx} ${hy}) rotate(${rot}) scale(${sc}) translate(${-hx} ${-hy})`
         )
         el.style.opacity = String(op)
       }
