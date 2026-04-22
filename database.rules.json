@@ -1,10 +1,22 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
     "games": {
       "$gameCode": {
         ".read": true,
         "clues": {
-          ".write": "root.child('games').child($gameCode).child('meta/phase').val() === 'clue-submission'"
+          "$targetId": {
+            "$memberId": {
+              ".write": "root.child('games').child($gameCode).child('meta/phase').val() === 'clue-submission'",
+              "submittedAt": {
+                ".validate": "newData.isNumber()"
+              },
+              "$slot": {
+                ".validate": "newData.isString() && newData.val().length < 1000"
+              }
+            }
+          }
         },
         "meta": {
           ".write": false
@@ -13,6 +25,9 @@
           ".write": false
         },
         "scores": {
+          ".write": false
+        },
+        "members": {
           ".write": false
         }
       }
